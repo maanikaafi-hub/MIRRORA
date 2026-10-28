@@ -1,0 +1,65 @@
+name: GUI preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  JUCE_TAG: 8.0.8
+
+jobs:
+  render:
+    name: Render the editor off-screen
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout MIRRORA
+        uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_TAG }}
+          path: JUCE
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config xvfb \
+            libasound2-dev libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev \
+            libgl1-mesa-dev libcurl4-openssl-dev fonts-dejavu-core
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE"
+          -DMIRRORA_BUILD_PREVIEW=ON
+
+      - name: Build renderer
+        run: cmake --build build --target MIRRORA_Preview --parallel
+
+      - name: Render
+        run: |
+          cd build
+          BIN=$(find . -name "MIRRORA_Preview" -type f -perm -u+x | head -1)
+          echo "binary: $BIN"
+          xvfb-run -a -s "-screen 0 1600x1200x24" "$BIN" mirrora-gui.png
+          ls -la mirrora-gui.png
+          python3 - <<'PY'
+          import base64, pathlib
+          data = base64.b64encode(pathlib.Path("mirrora-gui.png").read_bytes()).decode()
+          print("PNG start")
+          for i in range(0, len(data), 4000):
+              print("PNGCHUNK:" + data[i:i+4000], flush=True)
+          print("PNG end")
+          PY
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirrora-gui-preview
+          path: build/mirrora-gui.png
+          if-no-files-found: error

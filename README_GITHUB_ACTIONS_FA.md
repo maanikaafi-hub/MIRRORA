@@ -1,22 +1,39 @@
-# ساخت خودکار MIRRORA با GitHub Actions
+# ساخت خودکار با GitHub Actions
 
-این پروژه شامل سورس اولیهٔ MIRRORA و workflow ساخت خودکار است. با اجرای GitHub Actions می‌توان خروجی‌های زیر را دریافت کرد:
+فایل `.github/workflows/build.yml` روی هر push و هر Pull Request اجرا می‌شود و
+سه کار (job) دارد:
 
-- Windows x64: VST3
-- macOS: VST3
-- macOS: Audio Unit (AU)
+| Job | سیستم | خروجی |
+|---|---|---|
+| `Windows x64 • VST3` | `windows-2022` | `MIRRORA-Windows-x64-VST3.zip` (شامل `MIRRORA.vst3`) |
+| `macOS • VST3 + AU (universal)` | `macos-14` | `MIRRORA-macOS-VST3.zip` و `MIRRORA-macOS-AU.zip` (universal: arm64 + x86_64) |
+| `Linux x64 • compile check` | `ubuntu-22.04` | فقط تست کامپایل VST3 (بدون انتشار فایل) |
 
-## روش استفاده
+هر سه job از JUCE نسخه‌ی `8.0.8` استفاده می‌کنند (متغیر `JUCE_TAG` در بالای فایل).
 
-1. فایل ZIP را استخراج کن.
-2. محتوای پوشه را در یک repository جدید GitHub آپلود کن؛ فایل و پوشهٔ مخفی `.github` هم باید آپلود شود.
-3. در GitHub وارد تب **Actions** شو و workflow با نام **Build MIRRORA Plugins** را باز کن.
-4. روی **Run workflow** بزن؛ یا با push کردن کد به شاخهٔ `main` یا `master` ساخت به‌صورت خودکار اجرا می‌شود.
-5. پس از اتمام موفق workflow، در پایین صفحهٔ اجرای workflow بخش **Artifacts** را باز کن و خروجی موردنظر را دانلود کن.
+## دریافت فایل‌های ساخته‌شده
+1. به تب **Actions** بروید و آخرین اجرای موفق را باز کنید.
+2. پایین صفحه، بخش **Artifacts**:
+   * `MIRRORA-Windows-x64-VST3`
+   * `MIRRORA-macOS`
+3. فایل ZIP را دانلود کنید.
 
-## نکات مهم
+## ساخت Release (لینک دانلود دائمی)
+اگر یک تگ با الگوی `v*` بزنید، job چهارم (`release`) اجرا می‌شود و فایل‌های
+ویندوز و مک را به‌صورت دارایی (asset) به همان Release متصل می‌کند:
 
-- GitHub Actions سورس JUCE را هنگام build دریافت می‌کند؛ لازم نیست JUCE را جداگانه داخل ZIP قرار بدهی.
-- این بسته سورس و تنظیمات ساخت است، نه فایل پلاگین کامپایل‌شده.
-- ساخت هنوز در این محیط اجرا و تأیید نشده است؛ ممکن است بسته به نسخهٔ JUCE یا خطاهای کامپایل، نیاز به اصلاح داشته باشد.
-- خروجی Windows برای x64 است. خروجی macOS روی runner اپل ساخته می‌شود؛ این workflow فعلاً build جداگانهٔ Universal Binary را تضمین نمی‌کند.
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+سپس در صفحه‌ی **Releases** مخزن، لینک‌های دانلود آماده‌اند.
+
+## اجرای دستی
+در تب Actions، ورک‌فلو **Build MIRRORA** را انتخاب و **Run workflow** را بزنید.
+
+## نکته‌ها
+* بیلد مک بدون امضا (unsigned) است؛ بعد از نصب یک بار
+  `sudo xattr -cr <bundle>` را اجرا کنید.
+* برای AU در Logic/GarageBand در صورت نیاز `auval -a` را اجرا کنید.
+* AU فقط روی مک ساخته می‌شود؛ روی ویندوز امکان‌پذیر نیست.

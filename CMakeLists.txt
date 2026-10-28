@@ -87,3 +87,54 @@ target_link_libraries(MIRRORA
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
+
+#===============================================================================
+# Optional: off-screen editor renderer used by the "GUI preview" workflow.
+#   cmake -DMIRRORA_BUILD_PREVIEW=ON ...
+#===============================================================================
+option(MIRRORA_BUILD_PREVIEW "Build the off-screen GUI renderer" OFF)
+
+if(MIRRORA_BUILD_PREVIEW)
+    juce_add_console_app(MIRRORA_Preview PRODUCT_NAME "MIRRORA_Preview")
+
+    juce_generate_juce_header(MIRRORA_Preview)
+
+    target_sources(MIRRORA_Preview PRIVATE
+        tools/preview/Preview.cpp
+        Source/PluginProcessor.cpp
+        Source/PluginProcessor.h
+        Source/PluginEditor.cpp
+        Source/PluginEditor.h
+        Source/MirroraTheme.h
+        Source/MirroraControls.cpp
+        Source/MirroraControls.h
+        Source/WaveformDisplay.cpp
+        Source/WaveformDisplay.h)
+
+    target_compile_features(MIRRORA_Preview PRIVATE cxx_std_17)
+
+    target_compile_definitions(MIRRORA_Preview PRIVATE
+        JucePlugin_Name="MIRRORA"
+        JucePlugin_VersionString="1.0.0"
+        JucePlugin_VersionCode=0x10000
+        JucePlugin_Desc="Real-time reverse effect"
+        JucePlugin_Manufacturer="Plugin Store"
+        JucePlugin_ManufacturerCode=0x506c5374
+        JucePlugin_PluginCode=0x4d727261
+        JucePlugin_IsSynth=0
+        JucePlugin_WantsMidiInput=0
+        JucePlugin_ProducesMidiOutput=0
+        JucePlugin_IsMidiEffect=0
+        JucePlugin_EditorRequiresKeyboardFocus=0
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_STANDALONE_APPLICATION=1
+        JUCE_MODAL_LOOPS_PERMITTED=1)
+
+    target_link_libraries(MIRRORA_Preview
+        PRIVATE
+            juce::juce_audio_utils
+            juce::juce_audio_processors
+            juce::juce_dsp
+            juce::juce_gui_basics)
+endif()
