@@ -2,6 +2,11 @@
 
 Real-time **reverse** audio effect (VST3 + AU) with a dark, brushed-metal interface.
 
+![MIRRORA interface](docs/gui-preview.png)
+
+*(the image above is rendered straight from the plug-in editor by CI — see
+`tools/preview`)*
+
 MIRRORA keeps recording the incoming signal into a window and, the instant that
 window is complete, plays it back **backwards** while the next window is being
 recorded. The window is either a fixed length (SIMPLE) or locked to the host
@@ -72,7 +77,9 @@ Output:
 * `build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3`
 * `build/MIRRORA_artefacts/Release/AU/MIRRORA.component` (macOS only)
 
-GitHub Actions builds all of the above on every push (`.github/workflows/build.yml`).
+GitHub Actions builds all of the above on every push (`.github/workflows/build.yml`),
+and `.github/workflows/gui-preview.yml` renders the editor off-screen and runs the
+offline engine self-test (`tools/audiotest`, results in `docs/selftest.log`).
 
 ## What was fixed in 1.0.0
 
