@@ -1,0 +1,62 @@
+name: Build MIRRORA Plugins
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-vst3:
+    name: Windows x64 VST3
+    runs-on: windows-2022
+    steps:
+      - name: Checkout MIRRORA
+        uses: actions/checkout@v4
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          path: JUCE
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -DJUCE_DIR="${{ github.workspace }}/JUCE" -DCMAKE_BUILD_TYPE=Release
+      - name: Build VST3
+        run: cmake --build build --config Release --target MIRRORA_VST3 --parallel
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MIRRORA-Windows-x64-VST3
+          path: build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3
+          if-no-files-found: error
+
+  macos-plugins:
+    name: macOS VST3 and AU
+    runs-on: macos-14
+    steps:
+      - name: Checkout MIRRORA
+        uses: actions/checkout@v4
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          path: JUCE
+      - name: Configure
+        run: cmake -S . -B build -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE" -DCMAKE_BUILD_TYPE=Release
+      - name: Build VST3 and AU
+        run: cmake --build build --config Release --target MIRRORA_VST3 MIRRORA_AU --parallel
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MIRRORA-macOS-VST3
+          path: build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3
+          if-no-files-found: error
+      - name: Upload AU artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MIRRORA-macOS-AU
+          path: build/MIRRORA_artefacts/Release/AU/MIRRORA.component
+          if-no-files-found: error
