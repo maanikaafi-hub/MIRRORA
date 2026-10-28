@@ -58,7 +58,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
     const auto  centre     = area.getCentre();
     const float ringRadius = diameter * 0.5f;
     const float ringWidth  = large ? 3.6f : 2.6f;
-    const float bodyRadius = ringRadius - (large ? 9.0f : 6.5f);
+    const float bodyRadius = ringRadius - (large ? 11.0f : 8.0f);
 
     const auto rotary = getRotaryParameters();
     const float startAngle = rotary.startAngleRadians;
@@ -102,15 +102,15 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.reduceClipRegion (bodyPath);
 
         // spherical base shading, light coming from the upper left
-        juce::ColourGradient base (juce::Colour (0xffa3a2ad),
-                                   centre.x - bodyRadius * 0.30f, centre.y - bodyRadius * 0.44f,
-                                   juce::Colour (0xff0c0b11),
-                                   centre.x + bodyRadius * 0.88f, centre.y + bodyRadius * 0.88f,
+        juce::ColourGradient base (juce::Colour (0xffcbcad4),
+                                   centre.x - bodyRadius * 0.26f, centre.y - bodyRadius * 0.40f,
+                                   juce::Colour (0xff0d0c12),
+                                   centre.x + bodyRadius * 0.92f, centre.y + bodyRadius * 0.92f,
                                    true);
-        base.addColour (0.20, juce::Colour (0xff82818c));
-        base.addColour (0.42, juce::Colour (0xff4a4952));
-        base.addColour (0.66, juce::Colour (0xff26252c));
-        base.addColour (0.86, juce::Colour (0xff1a1920));
+        base.addColour (0.16, juce::Colour (0xff9b9aa6));
+        base.addColour (0.34, juce::Colour (0xff6c6b78));
+        base.addColour (0.55, juce::Colour (0xff403f49));
+        base.addColour (0.78, juce::Colour (0xff232229));
         g.setGradientFill (base);
         g.fillRect (area);
 
@@ -118,14 +118,14 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         juce::Graphics::ScopedSaveState rotateScope (g);
         g.addTransform (juce::AffineTransform::rotation (angle, centre.x, centre.y));
 
-        const int spokes = large ? 240 : 140;
+        const int spokes = large ? 420 : 220;
 
         for (int i = 0; i < spokes; ++i)
         {
             const float spokeAngle = (float) i * juce::MathConstants<float>::twoPi / (float) spokes;
             const float modulation = 0.5f + 0.5f * std::sin (spokeAngle * 5.0f + 0.7f);
 
-            g.setColour (juce::Colours::white.withAlpha (0.008f + 0.040f * modulation * modulation));
+            g.setColour (juce::Colours::white.withAlpha (0.010f + 0.075f * modulation * modulation));
             g.drawLine (juce::Line<float> (centre.getPointOnCircumference (bodyRadius * 0.12f, spokeAngle),
                                            centre.getPointOnCircumference (bodyRadius * 0.96f, spokeAngle)),
                         0.9f);
@@ -136,21 +136,31 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
                                     centre.x - bodyRadius, centre.y,
                                     juce::Colours::transparentBlack,
                                     centre.x + bodyRadius, centre.y, false);
-        sheen.addColour (0.30, juce::Colours::white.withAlpha (0.045f));
-        sheen.addColour (0.58, juce::Colours::black.withAlpha (0.22f));
+        sheen.addColour (0.26, juce::Colours::white.withAlpha (0.09f));
+        sheen.addColour (0.50, juce::Colours::white.withAlpha (0.02f));
+        sheen.addColour (0.62, juce::Colours::black.withAlpha (0.30f));
         sheen.addColour (1.0, juce::Colours::transparentBlack);
         g.setGradientFill (sheen);
         g.fillRect (area);
 
-        // soft specular highlight near the top left
-        juce::ColourGradient specular (juce::Colours::white.withAlpha (0.13f),
-                                       centre.x - bodyRadius * 0.34f, centre.y - bodyRadius * 0.42f,
+        // soft specular bloom near the top left
+        juce::ColourGradient specular (juce::Colours::white.withAlpha (0.16f),
+                                       centre.x - bodyRadius * 0.36f, centre.y - bodyRadius * 0.46f,
                                        juce::Colours::transparentWhite,
-                                       centre.x - bodyRadius * 0.34f, centre.y - bodyRadius * 0.42f,
+                                       centre.x - bodyRadius * 0.36f, centre.y - bodyRadius * 0.46f,
                                        true);
-        specular.addColour (0.55, juce::Colours::white.withAlpha (0.03f));
+        specular.addColour (0.35, juce::Colours::white.withAlpha (0.07f));
         g.setGradientFill (specular);
         g.fillRect (area);
+
+        // crisp specular streak, upper left
+        g.setColour (juce::Colours::white.withAlpha (0.30f));
+        g.strokePath (makeArc (centre, bodyRadius * 0.74f,
+                               juce::MathConstants<float>::pi * 1.10f,
+                               juce::MathConstants<float>::pi * 1.42f),
+                      juce::PathStrokeType (large ? 3.0f : 2.0f,
+                                            juce::PathStrokeType::curved,
+                                            juce::PathStrokeType::rounded));
     }
 
     // edge vignette keeps the cap looking domed
@@ -159,9 +169,9 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.reduceClipRegion (bodyPath);
 
         juce::ColourGradient vignette (juce::Colours::transparentBlack, centre.x, centre.y,
-                                       juce::Colours::black.withAlpha (0.55f),
+                                       juce::Colours::black.withAlpha (0.34f),
                                        centre.x, centre.y - bodyRadius, true);
-        vignette.addColour (0.55, juce::Colours::transparentBlack);
+        vignette.addColour (0.70, juce::Colours::transparentBlack);
         g.setGradientFill (vignette);
         g.fillRect (area);
     }
