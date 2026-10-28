@@ -6,6 +6,7 @@ on:
     paths:
       - 'Source/**'
       - 'tools/preview/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/gui-preview.yml'
 
 permissions:
