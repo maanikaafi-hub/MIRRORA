@@ -1,0 +1,7 @@
+# Build output
+build/
+dist/
+out/
+.DS_Store
+*.user
+JUCE/
