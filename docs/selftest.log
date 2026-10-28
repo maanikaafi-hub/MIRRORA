@@ -1,1 +1,22 @@
-no test log
+MIRRORA engine self-test
+
+[1] Dry passthrough (MIX = 0)
+  PASS  dry signal is passed through unchanged (max error 0.00000000)
+
+[2] Output gain
+  PASS  -6 dB is applied (got 0.2506, expected 0.2506)
+
+[3] SIMPLE mode reverses the window
+  PASS  wet output is silent before the first window is complete
+  PASS  reversed impulse has full amplitude (got 1.0000)
+  PASS  impulse lands at 43099 (got 43099)
+  PASS  nothing else leaks into the wet output
+
+[4] RHYTHMIC mode locks the window to the tempo
+  PASS  still silent during the first 2 s window
+  FAIL  tempo-locked window is 2 s: impulse lands at 175899 (got 0)
+
+[5] Mode switch and length change stay finite
+  PASS  no NaN / Infinity / runaway level while automating
+
+1 TEST(S) FAILED
