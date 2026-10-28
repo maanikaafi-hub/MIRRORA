@@ -14,9 +14,9 @@ MIRRORA engine self-test
 
 [4] RHYTHMIC mode locks the window to the tempo
   PASS  still silent during the first 2 s window
-  FAIL  tempo-locked window is 2 s: impulse lands at 175899 (got 0)
+  PASS  tempo-locked window is 2 s: impulse lands at 175899 (got 175899)
 
 [5] Mode switch and length change stay finite
   PASS  no NaN / Infinity / runaway level while automating
 
-1 TEST(S) FAILED
+ALL TESTS PASSED
