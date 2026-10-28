@@ -42,13 +42,13 @@ jobs:
       - name: Configure
         run: >
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE"
-          -DMIRRORA_BUILD_PREVIEW=ON
+          -DMIRRORA_BUILD_PREVIEW=ON -DMIRRORA_BUILD_TESTS=ON
 
-      - name: Build renderer
+      - name: Build renderer and self-test
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build --target MIRRORA_Preview --parallel 2>&1 | tee build.log
+          cmake --build build --target MIRRORA_Preview MIRRORA_AudioTest --parallel 2>&1 | tee build.log
 
       - name: Report build errors
         if: failure()
@@ -57,6 +57,19 @@ jobs:
           grep -E "error:|Error|undefined reference" build.log | head -n 40 | while IFS= read -r line; do
             echo "::error title=preview build::$line"
           done
+
+      - name: Run engine self-test
+        shell: bash
+        run: |
+          TEST=$(find build -name "MIRRORA_AudioTest" -type f -perm -u+x | head -1)
+          echo "binary: $TEST"
+          xvfb-run -a "$TEST" 2>&1 | tee test.log
+          if grep -q "FAIL" test.log; then
+            grep "FAIL" test.log | while IFS= read -r line; do
+              echo "::error title=engine self-test::$line"
+            done
+            exit 1
+          fi
 
       - name: Render
         run: |

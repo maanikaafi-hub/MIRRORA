@@ -140,3 +140,56 @@ if(MIRRORA_BUILD_PREVIEW)
             juce::juce_dsp
             juce::juce_gui_basics)
 endif()
+
+#===============================================================================
+# Optional: offline engine self-test (used by CI to catch DSP regressions).
+#   cmake -DMIRRORA_BUILD_TESTS=ON ...
+#===============================================================================
+option(MIRRORA_BUILD_TESTS "Build the offline engine self-test" OFF)
+
+if(MIRRORA_BUILD_TESTS)
+    juce_add_console_app(MIRRORA_AudioTest PRODUCT_NAME "MIRRORA_AudioTest")
+
+    juce_generate_juce_header(MIRRORA_AudioTest)
+
+    target_sources(MIRRORA_AudioTest PRIVATE
+        tools/audiotest/AudioTest.cpp
+        Source/PluginProcessor.cpp
+        Source/PluginProcessor.h
+        Source/PluginEditor.cpp
+        Source/PluginEditor.h
+        Source/MirroraTheme.h
+        Source/MirroraControls.cpp
+        Source/MirroraControls.h
+        Source/WaveformDisplay.cpp
+        Source/WaveformDisplay.h)
+
+    target_include_directories(MIRRORA_AudioTest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+
+    target_compile_features(MIRRORA_AudioTest PRIVATE cxx_std_17)
+
+    target_compile_definitions(MIRRORA_AudioTest PRIVATE
+        JucePlugin_Name="MIRRORA"
+        JucePlugin_VersionString="1.0.0"
+        JucePlugin_VersionCode=0x10000
+        JucePlugin_Desc="Real-time reverse effect"
+        JucePlugin_Manufacturer="Plugin Store"
+        JucePlugin_ManufacturerCode=0x506c5374
+        JucePlugin_PluginCode=0x4d727261
+        JucePlugin_IsSynth=0
+        JucePlugin_WantsMidiInput=0
+        JucePlugin_ProducesMidiOutput=0
+        JucePlugin_IsMidiEffect=0
+        JucePlugin_EditorRequiresKeyboardFocus=0
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_STANDALONE_APPLICATION=1
+        JUCE_MODAL_LOOPS_PERMITTED=1)
+
+    target_link_libraries(MIRRORA_AudioTest
+        PRIVATE
+            juce::juce_audio_utils
+            juce::juce_audio_processors
+            juce::juce_dsp
+            juce::juce_gui_basics)
+endif()
