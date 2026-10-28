@@ -76,8 +76,6 @@ void PanelBackground::paint (juce::Graphics& g)
     g.fillRoundedRectangle (30.0f, 14.0f, 3.6f, 21.0f, 1.8f);
     g.fillEllipse (39.6f, 23.0f, 4.4f, 4.4f);
     g.fillRoundedRectangle (47.0f, 18.5f, 3.6f, 13.0f, 1.8f);
-    g.setColour (colours::purple.withAlpha (0.35f));
-    g.fillEllipse (26.0f, 21.0f, 8.0f, 8.0f);
 
     //---- title --------------------------------------------------------------
     drawText (g, "MIRRORA", { 60.0f, 8.0f, 260.0f, 32.0f },
@@ -286,9 +284,9 @@ void MIRRORAEditor::layoutContent()
     simpleButton  .setBounds (34,  124, 130,  80);
     rhythmicButton.setBounds (180, 124, 130,  80);
 
-    mixKnob   .setBounds (392,  54, 172, 236);
-    lengthKnob.setBounds (623,  96,  96, 142);
-    outputKnob.setBounds (848,  96,  96, 142);
+    mixKnob   .setBounds (392,  56, 172, 214);
+    lengthKnob.setBounds (623,  96,  96, 130);
+    outputKnob.setBounds (848,  96,  96, 130);
 
     syncButton.setBounds (735, 128, 110, 38);
 

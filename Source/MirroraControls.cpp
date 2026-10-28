@@ -37,15 +37,15 @@ void Knob::paint (juce::Graphics& g)
 {
     auto area = getLocalBounds().toFloat();
 
-    const float labelBand = large ? 56.0f : 46.0f;
+    const float labelBand = large ? 40.0f : 34.0f;
     auto dialArea = area.removeFromTop (juce::jmax (12.0f, area.getHeight() - labelBand));
 
     paintDial (g, dialArea);
 
-    auto captionArea = area.removeFromTop (area.getHeight() * (large ? 0.52f : 0.5f));
+    auto captionArea = area.removeFromTop (area.getHeight() * 0.5f);
 
     drawText (g, caption, captionArea,
-              uiFont (large ? 11.5f : 9.0f, large ? 0.22f : 0.24f), colours::textDim);
+              uiFont (large ? 11.0f : 9.0f, 0.24f), colours::textDim);
 
     drawText (g, getTextFromValue (getValue()), area,
               uiFont (large ? 14.0f : 11.5f, 0.05f), colours::textBright);
@@ -76,7 +76,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
 
     // track
     const auto trackArc = makeArc (centre, ringRadius, startAngle, endAngle);
-    g.setColour (juce::Colours::white.withAlpha (0.07f));
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
     g.strokePath (trackArc, juce::PathStrokeType (ringWidth, juce::PathStrokeType::curved,
                                                  juce::PathStrokeType::rounded));
 
@@ -102,12 +102,13 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.reduceClipRegion (bodyPath);
 
         // spherical base shading
-        juce::ColourGradient base (colours::metalLight.darker (0.2f),
-                                   centre.x - bodyRadius * 0.30f, centre.y - bodyRadius * 0.45f,
-                                   colours::metalDark,
-                                   centre.x + bodyRadius * 0.75f, centre.y + bodyRadius * 0.75f,
+        juce::ColourGradient base (juce::Colour (0xff75757f),
+                                   centre.x - bodyRadius * 0.28f, centre.y - bodyRadius * 0.42f,
+                                   juce::Colour (0xff111016),
+                                   centre.x + bodyRadius * 0.80f, centre.y + bodyRadius * 0.80f,
                                    true);
-        base.addColour (0.42, juce::Colour (0xff2c2b33));
+        base.addColour (0.30, juce::Colour (0xff5c5b66));
+        base.addColour (0.62, juce::Colour (0xff2a2931));
         g.setGradientFill (base);
         g.fillRect (area);
 
@@ -145,7 +146,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.reduceClipRegion (bodyPath);
 
         juce::ColourGradient vignette (juce::Colours::transparentBlack, centre.x, centre.y,
-                                       juce::Colours::black.withAlpha (0.78f),
+                                       juce::Colours::black.withAlpha (0.62f),
                                        centre.x, centre.y - bodyRadius, true);
         g.setGradientFill (vignette);
         g.fillRect (area);
@@ -408,9 +409,9 @@ void IconButton::drawGlyph (juce::Graphics& g, IconType type, juce::Rectangle<fl
                 const float offset = (i == 0 ? -w * 0.62f : w * 0.62f);
 
                 juce::Path triangle;
-                triangle.startNewSubPath (centre.x + offset - w * 0.5f, centre.y - h);
-                triangle.lineTo (centre.x + offset + w * 0.5f, centre.y);
-                triangle.lineTo (centre.x + offset - w * 0.5f, centre.y + h);
+                triangle.startNewSubPath (centre.x + offset + w * 0.5f, centre.y - h);
+                triangle.lineTo (centre.x + offset - w * 0.5f, centre.y);
+                triangle.lineTo (centre.x + offset + w * 0.5f, centre.y + h);
                 triangle.closeSubPath();
                 g.fillPath (triangle);
             }

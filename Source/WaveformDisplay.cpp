@@ -74,14 +74,15 @@ void WaveformDisplay::paint (juce::Graphics& g)
 
         const int numBins = (int) displayed.size();
         const float step = width / (float) numBins;
-        const float barWidth = juce::jmax (1.0f, step * 0.68f);
+        const float barWidth = juce::jmax (1.0f, step * 0.42f);
 
         juce::Path bars;
 
         for (int i = 0; i < numBins; ++i)
         {
             const float value = juce::jlimit (0.0f, 1.0f, displayed[(size_t) i]);
-            const float amplitude = juce::jmax (0.7f, value * halfHeight);
+            const float shaped = std::pow (value, 0.80f);
+            const float amplitude = juce::jmax (0.8f, shaped * halfHeight);
             const float x = left + step * (float) i;
 
             bars.addRectangle (x, centreY - amplitude, barWidth, amplitude * 2.0f);
@@ -90,11 +91,13 @@ void WaveformDisplay::paint (juce::Graphics& g)
         g.setColour (colours::purple.withAlpha (0.20f));
         g.fillPath (bars);
 
-        juce::ColourGradient barGradient (colours::purple.withAlpha (0.55f),
+        juce::ColourGradient barGradient (colours::purpleDeep.withAlpha (0.45f),
                                           bounds.getCentreX(), bounds.getY() + 10.0f,
-                                          colours::purple.withAlpha (0.55f),
+                                          colours::purpleDeep.withAlpha (0.45f),
                                           bounds.getCentreX(), bounds.getBottom() - 10.0f, false);
-        barGradient.addColour (0.5, juce::Colour (0xffe0ceff).withAlpha (0.95f));
+        barGradient.addColour (0.35, colours::purple.withAlpha (0.85f));
+        barGradient.addColour (0.5, juce::Colour (0xfff0e4ff).withAlpha (0.98f));
+        barGradient.addColour (0.65, colours::purple.withAlpha (0.85f));
         g.setGradientFill (barGradient);
         g.fillPath (bars);
 
