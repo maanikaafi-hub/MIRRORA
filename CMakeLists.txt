@@ -111,6 +111,8 @@ if(MIRRORA_BUILD_PREVIEW)
         Source/WaveformDisplay.cpp
         Source/WaveformDisplay.h)
 
+    target_include_directories(MIRRORA_Preview PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+
     target_compile_features(MIRRORA_Preview PRIVATE cxx_std_17)
 
     target_compile_definitions(MIRRORA_Preview PRIVATE
