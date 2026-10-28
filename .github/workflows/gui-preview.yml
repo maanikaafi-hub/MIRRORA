@@ -44,7 +44,18 @@ jobs:
           -DMIRRORA_BUILD_PREVIEW=ON
 
       - name: Build renderer
-        run: cmake --build build --target MIRRORA_Preview --parallel
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build --target MIRRORA_Preview --parallel 2>&1 | tee build.log
+
+      - name: Report build errors
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "error:|Error|undefined reference" build.log | head -n 40 | while IFS= read -r line; do
+            echo "::error title=preview build::$line"
+          done
 
       - name: Render
         run: |
