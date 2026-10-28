@@ -3,8 +3,11 @@
 
     A true "reverse" effect: the incoming signal is recorded into a window and,
     as soon as the window is complete, played back backwards (while the next
-    window is being recorded). The window is either a fixed duration (SIMPLE)
-    or locked to the host tempo (RHYTHMIC).
+    window is being recorded).
+
+    RHYTHMIC mode locks those windows to the musical grid reported by the host
+    (PPQ), so every reversed chunk starts exactly on a 1/16, 1/8, 1/4, 1/2 …
+    or triplet boundary. SIMPLE mode simply uses a fixed duration.
 */
 #pragma once
 
@@ -48,6 +51,7 @@ public:
     //==========================================================================
     juce::AudioProcessorValueTreeState& getState() noexcept { return parameters; }
 
+    /** Note-value labels of the LENGTH parameter ("1/16" … "2 Bars"). */
     static juce::StringArray getLengthChoices();
 
     /** Number of points in the GUI waveform scope. */
@@ -56,22 +60,33 @@ public:
     /** Copies the scope, oldest sample first. */
     void readScope (float* destination) const noexcept;
 
+    /** Copies the reversed audio of the current window (for drag & drop export).
+        Message thread only; returns false if nothing has been captured yet.
+    */
+    bool copyReversedWindow (juce::AudioBuffer<float>& destination) const;
+
+    juce::String describeExportName() const;
+
 private:
     //==========================================================================
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     void resetEngine();
-    void startNewWindow() noexcept;
+    bool startNewWindow() noexcept;
     void updateScope (const juce::AudioBuffer<float>& buffer) noexcept;
 
     void cacheBufferPointers() noexcept;
+
+    int lengthIndexInUse() const noexcept;
+    double beatsPerWindow() const noexcept;
+    double secondsPerWindow() const noexcept;
 
     //==========================================================================
     juce::AudioProcessorValueTreeState parameters;
 
     std::atomic<float>* modeValue   = nullptr;   // 0 = simple, 1 = rhythmic
     std::atomic<float>* mixValue    = nullptr;   // 0 .. 100 %
-    std::atomic<float>* lengthValue = nullptr;   // 0 .. 3
+    std::atomic<float>* lengthValue = nullptr;   // note-value index
     std::atomic<float>* syncValue   = nullptr;   // bool
     std::atomic<float>* bpmValue    = nullptr;   // fallback tempo
     std::atomic<float>* outputValue = nullptr;   // dB
@@ -95,11 +110,21 @@ private:
     bool playing     { false };
     int fadeLength   { 0 };
 
+    float* fades = nullptr;         // pre-computed cosine fade curve
+    int fadeSizeInSamples { 0 };
+    bool flushPending { false };
+
     bool rhythmicMode { false };
-    double pendingLengthF { 0.0 };
+
+    // grid tracking for RHYTHMIC mode
+    bool hasLastGridPosition { false };
+    double lastPpq { 0.0 };
 
     juce::SmoothedValue<float> mixSmoothed  { 1.0f };
     juce::SmoothedValue<float> gainSmoothed { 1.0f };
+
+    //---- drag & drop export -------------------------------------------------
+    mutable juce::CriticalSection windowLock;
 
     //---- GUI scope ---------------------------------------------------------
     std::array<std::atomic<float>, scopeBins> scopeData {};

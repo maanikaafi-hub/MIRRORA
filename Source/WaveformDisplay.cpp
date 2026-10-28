@@ -5,7 +5,8 @@
 WaveformDisplay::WaveformDisplay (MIRRORAProcessor& processorToUse)
     : processor (processorToUse)
 {
-    setInterceptsMouseClicks (false, false);
+    setInterceptsMouseClicks (true, false);
+    setMouseCursor (juce::MouseCursor::DraggingHandCursor);
     startTimerHz (30);
 }
 
@@ -27,8 +28,107 @@ void WaveformDisplay::timerCallback()
         displayed[i] = next;
     }
 
+    if (hintFrames > 0)
+    {
+        --hintFrames;
+        needsRepaint = true;
+    }
+
     if (needsRepaint)
         repaint();
+}
+
+void WaveformDisplay::mouseDown (const juce::MouseEvent& e)
+{
+    dragStart = e.getPosition();
+    dragging = false;
+}
+
+void WaveformDisplay::mouseDrag (const juce::MouseEvent& e)
+{
+    if (dragging || e.getDistanceFromDragStart() < 8)
+        return;
+
+    dragging = true;
+    beginExport();
+}
+
+void WaveformDisplay::mouseUp (const juce::MouseEvent&)
+{
+    dragging = false;
+}
+
+void WaveformDisplay::mouseEnter (const juce::MouseEvent&)
+{
+    hovering = true;
+    repaint();
+}
+
+void WaveformDisplay::mouseExit (const juce::MouseEvent&)
+{
+    hovering = false;
+    repaint();
+}
+
+juce::File WaveformDisplay::createExportFile()
+{
+    juce::AudioBuffer<float> reversed;
+
+    if (! processor.copyReversedWindow (reversed))
+        return {};
+
+    const auto folder = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                            .getChildFile ("MIRRORA");
+
+    if (! folder.createDirectory())
+        return {};
+
+    // keep only the most recent exports around
+    for (const auto& entry : juce::RangedDirectoryIterator (folder, false, "*.wav"))
+        if (entry.getFile().getLastModificationTime() < juce::Time::getCurrentTime() - juce::RelativeTime::hours (2))
+            entry.getFile().deleteFile();
+
+    const auto file = folder.getNonexistentChildFile (processor.describeExportName(),
+                                                      ".wav", false);
+
+    if (auto stream = std::unique_ptr<juce::FileOutputStream> (file.createOutputStream()))
+    {
+        juce::WavAudioFormat format;
+        std::unique_ptr<juce::AudioFormatWriter> writer (
+            format.createWriterFor (stream.get(), processor.getSampleRate(),
+                                    (unsigned int) reversed.getNumChannels(), 24, {}, 0));
+
+        if (writer != nullptr)
+        {
+            stream.release();   // the writer owns the stream now
+            writer->writeFromAudioSampleBuffer (reversed, 0, reversed.getNumSamples());
+            writer.reset();
+            return file;
+        }
+    }
+
+    file.deleteFile();
+    return {};
+}
+
+void WaveformDisplay::beginExport()
+{
+    const auto file = createExportFile();
+
+    if (! file.existsAsFile())
+    {
+        hintFrames = 90;
+        hintText = "PLAY SOME AUDIO FIRST";
+        repaint();
+        return;
+    }
+
+    hintFrames = 90;
+    hintText = "EXPORTED: " + file.getFileName();
+    repaint();
+
+    juce::DragAndDropContainer::performExternalDragDropOfFiles ({ file.getFullPathName() },
+                                                                false, this, nullptr);
 }
 
 void WaveformDisplay::paint (juce::Graphics& g)
@@ -116,6 +216,21 @@ void WaveformDisplay::paint (juce::Graphics& g)
 
         g.setColour (colours::purple.withAlpha (0.18f));
         g.fillRect (bounds.getCentreX() - 3.0f, bounds.getY() + 22.0f, 6.0f, bounds.getHeight() - 44.0f);
+
+        //---- drag hint -------------------------------------------------------
+        if (hovering || hintFrames > 0)
+        {
+            const juce::String label = hintFrames > 0 ? hintText : "DRAG  →  EXPORT REVERSED AUDIO";
+
+            const auto pill = juce::Rectangle<float> (bounds.getCentreX() - 120.0f,
+                                                      bounds.getBottom() - 30.0f, 240.0f, 20.0f);
+            g.setColour (juce::Colours::black.withAlpha (0.55f));
+            g.fillRoundedRectangle (pill, 10.0f);
+            g.setColour (colours::purple.withAlpha (0.35f));
+            g.drawRoundedRectangle (pill, 10.0f, 1.0f);
+            mirrora::drawText (g, label, pill, mirrora::uiFont (8.5f, 0.22f),
+                               colours::purpleSoft.withAlpha (0.95f));
+        }
 
         //---- end markers -----------------------------------------------------
         const float capX[2] { bounds.getX() + 7.0f, bounds.getRight() - 9.5f };
