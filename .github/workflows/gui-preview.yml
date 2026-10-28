@@ -99,8 +99,8 @@ jobs:
         if: always()
         run: |
           mkdir -p docs
-          cp build/test.log docs/selftest.log 2>/dev/null || echo "no test log" > docs/selftest.log
-          cp build/build.log docs/build.log 2>/dev/null || echo "no build log" > docs/build.log
+          cp test.log docs/selftest.log 2>/dev/null || echo "no test log" > docs/selftest.log
+          cp build.log docs/build.log 2>/dev/null || echo "no build log" > docs/build.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f docs/selftest.log docs/build.log
