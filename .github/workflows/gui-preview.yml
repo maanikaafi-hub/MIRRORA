@@ -2,6 +2,11 @@ name: GUI preview
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'Source/**'
+      - 'tools/preview/**'
+      - '.github/workflows/gui-preview.yml'
 
 permissions:
   contents: read

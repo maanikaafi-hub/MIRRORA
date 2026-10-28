@@ -3,7 +3,7 @@
 
     Builds on Linux/macOS/Windows (see MIRRORA_BUILD_PREVIEW in CMakeLists.txt)
     and writes a PNG of the editor without opening a window. Used by the
-    "GUI preview" GitHub workflow to check the design.
+    "GUI preview" GitHub workflow to check the design.  (render trigger)
 */
 #include <JuceHeader.h>
 
