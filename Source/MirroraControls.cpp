@@ -102,14 +102,15 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.reduceClipRegion (bodyPath);
 
         // spherical base shading, light coming from the upper left
-        juce::ColourGradient base (juce::Colour (0xff8d8d97),
-                                   centre.x - bodyRadius * 0.32f, centre.y - bodyRadius * 0.46f,
-                                   juce::Colour (0xff101017),
-                                   centre.x + bodyRadius * 0.85f, centre.y + bodyRadius * 0.85f,
+        juce::ColourGradient base (juce::Colour (0xffa3a2ad),
+                                   centre.x - bodyRadius * 0.30f, centre.y - bodyRadius * 0.44f,
+                                   juce::Colour (0xff0c0b11),
+                                   centre.x + bodyRadius * 0.88f, centre.y + bodyRadius * 0.88f,
                                    true);
-        base.addColour (0.26, juce::Colour (0xff6e6d78));
-        base.addColour (0.55, juce::Colour (0xff39383f));
-        base.addColour (0.78, juce::Colour (0xff222128));
+        base.addColour (0.20, juce::Colour (0xff82818c));
+        base.addColour (0.42, juce::Colour (0xff4a4952));
+        base.addColour (0.66, juce::Colour (0xff26252c));
+        base.addColour (0.86, juce::Colour (0xff1a1920));
         g.setGradientFill (base);
         g.fillRect (area);
 
@@ -124,8 +125,10 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
             const float spokeAngle = (float) i * juce::MathConstants<float>::twoPi / (float) spokes;
             const float modulation = 0.5f + 0.5f * std::sin (spokeAngle * 5.0f + 0.7f);
 
-            g.setColour (juce::Colours::white.withAlpha (0.012f + 0.030f * modulation));
-            g.drawLine (juce::Line<float> (centre, centre.getPointOnCircumference (bodyRadius, spokeAngle)), 1.0f);
+            g.setColour (juce::Colours::white.withAlpha (0.008f + 0.040f * modulation * modulation));
+            g.drawLine (juce::Line<float> (centre.getPointOnCircumference (bodyRadius * 0.12f, spokeAngle),
+                                           centre.getPointOnCircumference (bodyRadius * 0.96f, spokeAngle)),
+                        0.9f);
         }
 
         // rotating sheen band across the face
@@ -162,6 +165,10 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         g.setGradientFill (vignette);
         g.fillRect (area);
     }
+
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.drawEllipse (centre.x - bodyRadius * 0.955f, centre.y - bodyRadius * 0.955f,
+                   bodyRadius * 1.91f, bodyRadius * 1.91f, 1.0f);
 
     // rim light
     g.setColour (juce::Colours::white.withAlpha (0.22f));

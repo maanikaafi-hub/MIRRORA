@@ -177,7 +177,7 @@ int main()
         constexpr int window = 88200;
         constexpr int impulseAt = 500;
 
-        std::vector<float> input ((size_t) (window + 4096), 0.0f);
+        std::vector<float> input ((size_t) (window * 2 + 512), 0.0f);
         input[(size_t) impulseAt] = 1.0f;
 
         Harness harness (100.0f, 2, true, 0.0f, 120.0);
