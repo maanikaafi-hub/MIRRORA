@@ -51,7 +51,7 @@ public:
     static juce::StringArray getLengthChoices();
 
     /** Number of points in the GUI waveform scope. */
-    static constexpr int scopeBins = 256;
+    static constexpr int scopeBins = 512;
 
     /** Copies the scope, oldest sample first. */
     void readScope (float* destination) const noexcept;

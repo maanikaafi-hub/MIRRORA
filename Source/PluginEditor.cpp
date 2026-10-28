@@ -17,13 +17,29 @@ void PanelBackground::paint (juce::Graphics& g)
 {
     using namespace mirrora;
 
-    const auto bounds = getLocalBounds().toFloat().reduced (0.5f);
-    const float radius = 14.0f;
+    const auto outer = getLocalBounds().toFloat().reduced (1.0f);
+    const float outerRadius = 16.0f;
+
+    //---- raised bezel -------------------------------------------------------
+    juce::Path bezel;
+    bezel.addRoundedRectangle (outer, outerRadius);
+
+    juce::ColourGradient bezelFill (juce::Colour (0xff3a3742), outer.getCentreX(), outer.getY(),
+                                    juce::Colour (0xff15141a), outer.getCentreX(), outer.getBottom(), false);
+    bezelFill.addColour (0.12, juce::Colour (0xff2e2b36));
+    g.setGradientFill (bezelFill);
+    g.fillPath (bezel);
+
+    g.setColour (juce::Colours::black.withAlpha (0.85f));
+    g.strokePath (bezel, juce::PathStrokeType (2.0f));
+
+    //---- body ---------------------------------------------------------------
+    const auto bounds = outer.reduced (4.0f);
+    const float radius = 13.0f;
 
     juce::Path panel;
     panel.addRoundedRectangle (bounds, radius);
 
-    //---- body ---------------------------------------------------------------
     juce::ColourGradient body (colours::panelTop, bounds.getCentreX(), bounds.getY(),
                                colours::panelBottom, bounds.getCentreX(), bounds.getBottom(), false);
     body.addColour (0.28, juce::Colour (0xff1d1c23));
@@ -38,12 +54,12 @@ void PanelBackground::paint (juce::Graphics& g)
         // brushed horizontal hairlines
         for (float y = bounds.getY(); y < bounds.getBottom(); y += 3.0f)
         {
-            g.setColour (juce::Colours::white.withAlpha (std::fmod (y, 6.0f) < 1.5f ? 0.014f : 0.006f));
+            g.setColour (juce::Colours::white.withAlpha (std::fmod (y, 6.0f) < 1.5f ? 0.016f : 0.007f));
             g.fillRect (bounds.getX(), y, bounds.getWidth(), 1.0f);
         }
 
         // top sheen
-        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.055f),
+        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.06f),
                                     bounds.getCentreX(), bounds.getY(),
                                     juce::Colours::transparentBlack,
                                     bounds.getCentreX(), bounds.getY() + bounds.getHeight() * 0.45f, false);
@@ -52,33 +68,46 @@ void PanelBackground::paint (juce::Graphics& g)
 
         // very soft purple bloom behind the knob row
         juce::ColourGradient glow (colours::purple.withAlpha (0.10f),
-                                   bounds.getCentreX(), bounds.getY() + 120.0f,
+                                   bounds.getCentreX(), bounds.getY() + 130.0f,
                                    juce::Colours::transparentBlack,
-                                   bounds.getCentreX(), bounds.getY() + 320.0f, true);
+                                   bounds.getCentreX(), bounds.getY() + 330.0f, true);
         g.setGradientFill (glow);
         g.fillRect (bounds);
     }
 
-    //---- header divider -----------------------------------------------------
+    //---- header -------------------------------------------------------------
     g.setColour (juce::Colours::white.withAlpha (0.05f));
-    g.fillRect (bounds.getX() + 18.0f, bounds.getY() + 51.0f, bounds.getWidth() - 36.0f, 1.0f);
+    g.fillRect (bounds.getX() + 10.0f, 51.0f, bounds.getWidth() - 20.0f, 1.0f);
+
+    // zoom cluster backdrop
+    {
+        const juce::Rectangle<float> cluster (620.0f, 11.0f, 128.0f, 28.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.030f));
+        g.fillRoundedRectangle (cluster, 14.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.075f));
+        g.drawRoundedRectangle (cluster.reduced (0.5f), 14.0f, 1.0f);
+    }
+
+    // separator before the store label
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.fillRect (822.0f, 10.0f, 1.0f, 30.0f);
 
     //---- frame --------------------------------------------------------------
-    g.setColour (juce::Colour (0xff34313d));
-    g.strokePath (panel, juce::PathStrokeType (1.3f));
-    g.setColour (juce::Colours::white.withAlpha (0.045f));
-    g.drawRoundedRectangle (bounds.reduced (1.6f), radius - 1.2f, 1.0f);
+    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.strokePath (panel, juce::PathStrokeType (1.2f));
+    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.drawRoundedRectangle (bounds.reduced (1.8f), radius - 1.2f, 1.0f);
 
     //---- logo ---------------------------------------------------------------
     const auto logoColour = colours::purpleSoft;
 
     g.setColour (logoColour);
-    g.fillRoundedRectangle (30.0f, 14.0f, 3.6f, 21.0f, 1.8f);
-    g.fillEllipse (39.6f, 23.0f, 4.4f, 4.4f);
-    g.fillRoundedRectangle (47.0f, 18.5f, 3.6f, 13.0f, 1.8f);
+    g.fillRoundedRectangle (32.0f, 14.0f, 3.6f, 21.0f, 1.8f);
+    g.fillEllipse (41.6f, 23.0f, 4.4f, 4.4f);
+    g.fillRoundedRectangle (49.0f, 18.5f, 3.6f, 13.0f, 1.8f);
 
     //---- title --------------------------------------------------------------
-    drawText (g, "MIRRORA", { 60.0f, 8.0f, 260.0f, 32.0f },
+    drawText (g, "MIRRORA", { 62.0f, 8.0f, 260.0f, 32.0f },
               uiFont (19.0f, 0.30f), colours::textBright, juce::Justification::centredLeft);
 
     //---- zoom readout -------------------------------------------------------
@@ -87,8 +116,8 @@ void PanelBackground::paint (juce::Graphics& g)
 
     //---- plugin store -------------------------------------------------------
     mirrora::IconButton::drawGlyph (g, mirrora::IconType::bars,
-                                    { 842.0f, 15.0f, 16.0f, 18.0f }, colours::textDim);
-    drawText (g, "Plugin Store", { 864.0f, 12.0f, 92.0f, 26.0f },
+                                    { 840.0f, 15.0f, 16.0f, 18.0f }, colours::textDim);
+    drawText (g, "Plugin Store", { 862.0f, 12.0f, 92.0f, 26.0f },
               uiFont (11.5f, 0.02f), colours::textDim, juce::Justification::centredLeft);
 
     //---- captions -----------------------------------------------------------
@@ -292,9 +321,9 @@ void MIRRORAEditor::layoutContent()
 
     waveform.setBounds (34, 276, 892, 162);
 
-    zoomOutButton.setBounds (626, 12, 26, 26);
-    zoomInButton .setBounds (716, 12, 26, 26);
-    infoButton   .setBounds (762, 12, 26, 26);
+    zoomOutButton.setBounds (624, 12, 26, 26);
+    zoomInButton .setBounds (718, 12, 26, 26);
+    infoButton   .setBounds (760, 12, 26, 26);
 
     lengthStepper.setBounds ( 68, 462, 200, 60);
     outputStepper.setBounds (733, 462, 200, 60);

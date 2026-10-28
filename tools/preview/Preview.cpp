@@ -29,10 +29,17 @@ int main (int argc, char** argv)
         for (int n = 0; n < 512; ++n)
         {
             const double t = (double) (b * 512 + n) / 44100.0;
-            const double envelope = 0.30 + 0.55 * std::abs (std::sin (t * 2.1))
-                                          + 0.15 * std::abs (std::sin (t * 7.3));
-            const float sample = (float) (envelope * 0.55
-                                          * std::sin (juce::MathConstants<double>::twoPi * t * 180.0));
+
+            // a musical-looking envelope: slow swell + accents + noise floor
+            const double swell = 0.42 + 0.34 * std::sin (juce::MathConstants<double>::twoPi * t * 0.55);
+            const double accent = 0.55 * std::pow (std::abs (std::sin (juce::MathConstants<double>::twoPi * t * 1.7)), 6.0);
+            const double noise = 0.10 * std::sin (t * 5237.0) * std::sin (t * 811.0);
+
+            const double tone = 0.55 * std::sin (juce::MathConstants<double>::twoPi * t * 220.0)
+                              + 0.25 * std::sin (juce::MathConstants<double>::twoPi * t * 333.0)
+                              + 0.18 * std::sin (juce::MathConstants<double>::twoPi * t * 97.0);
+
+            const float sample = (float) (juce::jlimit (0.0, 1.0, swell + accent + noise) * 0.62 * tone);
             block.setSample (0, n, sample);
             block.setSample (1, n, sample * 0.93f);
         }

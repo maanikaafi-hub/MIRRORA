@@ -101,61 +101,75 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         juce::Graphics::ScopedSaveState clipScope (g);
         g.reduceClipRegion (bodyPath);
 
-        // spherical base shading
-        juce::ColourGradient base (juce::Colour (0xff75757f),
-                                   centre.x - bodyRadius * 0.28f, centre.y - bodyRadius * 0.42f,
-                                   juce::Colour (0xff111016),
-                                   centre.x + bodyRadius * 0.80f, centre.y + bodyRadius * 0.80f,
+        // spherical base shading, light coming from the upper left
+        juce::ColourGradient base (juce::Colour (0xff8d8d97),
+                                   centre.x - bodyRadius * 0.32f, centre.y - bodyRadius * 0.46f,
+                                   juce::Colour (0xff101017),
+                                   centre.x + bodyRadius * 0.85f, centre.y + bodyRadius * 0.85f,
                                    true);
-        base.addColour (0.30, juce::Colour (0xff5c5b66));
-        base.addColour (0.62, juce::Colour (0xff2a2931));
+        base.addColour (0.26, juce::Colour (0xff6e6d78));
+        base.addColour (0.55, juce::Colour (0xff39383f));
+        base.addColour (0.78, juce::Colour (0xff222128));
         g.setGradientFill (base);
         g.fillRect (area);
 
+        // brushed metal: fine radial hairlines that rotate with the knob
         juce::Graphics::ScopedSaveState rotateScope (g);
         g.addTransform (juce::AffineTransform::rotation (angle, centre.x, centre.y));
 
-        // rotating brushed sheen
-        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.22f),
-                                    centre.x - bodyRadius, centre.y,
-                                    juce::Colours::transparentBlack,
-                                    centre.x + bodyRadius, centre.y, false);
-        sheen.addColour (0.34, juce::Colours::white.withAlpha (0.05f));
-        sheen.addColour (0.62, juce::Colours::black.withAlpha (0.30f));
-        sheen.addColour (1.0, juce::Colours::transparentBlack);
-        g.setGradientFill (sheen);
-        g.fillRect (area);
-
-        // radial "spokes" that turn with the knob
-        const int spokes = large ? 120 : 64;
+        const int spokes = large ? 240 : 140;
 
         for (int i = 0; i < spokes; ++i)
         {
             const float spokeAngle = (float) i * juce::MathConstants<float>::twoPi / (float) spokes;
-            const float alpha = 0.010f + 0.020f * (0.5f + 0.5f * std::sin (spokeAngle * 7.0f + 1.3f));
+            const float modulation = 0.5f + 0.5f * std::sin (spokeAngle * 5.0f + 0.7f);
 
-            g.setColour (juce::Colours::white.withAlpha (alpha));
-            g.drawLine (juce::Line<float> (centre, centre.getPointOnCircumference (bodyRadius, spokeAngle)),
-                        0.8f);
+            g.setColour (juce::Colours::white.withAlpha (0.012f + 0.030f * modulation));
+            g.drawLine (juce::Line<float> (centre, centre.getPointOnCircumference (bodyRadius, spokeAngle)), 1.0f);
         }
+
+        // rotating sheen band across the face
+        juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.20f),
+                                    centre.x - bodyRadius, centre.y,
+                                    juce::Colours::transparentBlack,
+                                    centre.x + bodyRadius, centre.y, false);
+        sheen.addColour (0.30, juce::Colours::white.withAlpha (0.045f));
+        sheen.addColour (0.58, juce::Colours::black.withAlpha (0.22f));
+        sheen.addColour (1.0, juce::Colours::transparentBlack);
+        g.setGradientFill (sheen);
+        g.fillRect (area);
+
+        // soft specular highlight near the top left
+        juce::ColourGradient specular (juce::Colours::white.withAlpha (0.13f),
+                                       centre.x - bodyRadius * 0.34f, centre.y - bodyRadius * 0.42f,
+                                       juce::Colours::transparentWhite,
+                                       centre.x - bodyRadius * 0.34f, centre.y - bodyRadius * 0.42f,
+                                       true);
+        specular.addColour (0.55, juce::Colours::white.withAlpha (0.03f));
+        g.setGradientFill (specular);
+        g.fillRect (area);
     }
 
-    // vignette
+    // edge vignette keeps the cap looking domed
     {
         juce::Graphics::ScopedSaveState clipScope (g);
         g.reduceClipRegion (bodyPath);
 
         juce::ColourGradient vignette (juce::Colours::transparentBlack, centre.x, centre.y,
-                                       juce::Colours::black.withAlpha (0.62f),
+                                       juce::Colours::black.withAlpha (0.55f),
                                        centre.x, centre.y - bodyRadius, true);
+        vignette.addColour (0.55, juce::Colours::transparentBlack);
         g.setGradientFill (vignette);
         g.fillRect (area);
     }
 
     // rim light
-    g.setColour (juce::Colours::white.withAlpha (0.10f));
+    g.setColour (juce::Colours::white.withAlpha (0.22f));
     g.drawEllipse (centre.x - bodyRadius + 0.5f, centre.y - bodyRadius + 0.5f,
-                   (bodyRadius - 0.5f) * 2.0f, (bodyRadius - 0.5f) * 2.0f, 1.1f);
+                   (bodyRadius - 0.5f) * 2.0f, (bodyRadius - 0.5f) * 2.0f, 1.2f);
+    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.drawEllipse (centre.x - bodyRadius - 1.0f, centre.y - bodyRadius - 1.0f,
+                   (bodyRadius + 1.0f) * 2.0f, (bodyRadius + 1.0f) * 2.0f, 1.0f);
 
     g.setColour (juce::Colours::white.withAlpha (0.20f));
     g.strokePath (makeArc (centre, bodyRadius - 1.4f,
