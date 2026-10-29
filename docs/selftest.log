@@ -1,0 +1,43 @@
+MIRRORA engine self-test
+
+[1] Dry passthrough (MIX = 0)
+  PASS  dry signal is passed through unchanged (max error 0.00000000)
+
+[2] Output gain
+  PASS  -6 dB is applied (got 0.2506, expected 0.2506)
+
+[3] SIMPLE mode, straight note values
+  PASS  1/16: silent while the first window is being filled
+  PASS  1/16: window is 5513 samples, impulse reversed to 10825 (got 10825)
+  PASS  1/8: silent while the first window is being filled
+  PASS  1/8: window is 11025 samples, impulse reversed to 21849 (got 21849)
+  PASS  1/4: silent while the first window is being filled
+  PASS  1/4: window is 22050 samples, impulse reversed to 43899 (got 43899)
+  PASS  1/2: silent while the first window is being filled
+  PASS  1/2: window is 44100 samples, impulse reversed to 87999 (got 87999)
+
+[4] SIMPLE mode, triplets
+  PASS  1/8T: silent while the first window is being filled
+  PASS  1/8T: window is 7350 samples, impulse reversed to 14499 (got 14499)
+  PASS  1/4T: silent while the first window is being filled
+  PASS  1/4T: window is 14700 samples, impulse reversed to 29199 (got 29199)
+  PASS  1/2T: silent while the first window is being filled
+  PASS  1/2T: window is 29400 samples, impulse reversed to 58599 (got 58599)
+
+[5] RHYTHMIC mode is locked to the host grid (120 BPM)
+  PASS  1/8: grid cell 11025 samples, reversed impulse at 43399 (got 43401)
+  PASS  1/4: grid cell 22050 samples, reversed impulse at 87499 (got 87501)
+  PASS  1/8T: grid cell 7350 samples, reversed impulse at 28699 (got 28701)
+  PASS  1 Bar: grid cell 88200 samples, reversed impulse at 352099 (got 352101)
+
+[6] RHYTHMIC mode follows the tempo
+  PASS  140 BPM grid cell 18900 samples, impulse at 75299 (got 75301)
+
+[7] Drag & drop export snapshot
+  PASS  copyReversedWindow returns a snapshot
+  PASS  exported audio is reversed (impulse at 14099, expected 14099)
+
+[8] Automation stability
+  PASS  no NaN / Infinity / runaway level while automating
+
+ALL TESTS PASSED

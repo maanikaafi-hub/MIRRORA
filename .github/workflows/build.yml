@@ -1,62 +1,146 @@
-name: Build MIRRORA Plugins
+name: Build MIRRORA
 
 on:
   push:
-    branches: [main, master]
+    branches: ['**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
+env:
+  JUCE_TAG: 8.0.8
+
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  windows-vst3:
-    name: Windows x64 VST3
+  #-----------------------------------------------------------------------------
+  windows-x64-vst3:
+    name: Windows x64 • VST3
     runs-on: windows-2022
     steps:
       - name: Checkout MIRRORA
         uses: actions/checkout@v4
+
       - name: Checkout JUCE
         uses: actions/checkout@v4
         with:
           repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_TAG }}
           path: JUCE
+
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -DJUCE_DIR="${{ github.workspace }}/JUCE" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DJUCE_DIR="${{ github.workspace }}/JUCE"
+
       - name: Build VST3
+        shell: pwsh
         run: cmake --build build --config Release --target MIRRORA_VST3 --parallel
-      - name: Upload VST3 artifact
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3" `
+                           -DestinationPath "dist/MIRRORA-Windows-x64-VST3.zip" -Force
+
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: MIRRORA-Windows-x64-VST3
-          path: build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3
+          path: dist/MIRRORA-Windows-x64-VST3.zip
           if-no-files-found: error
 
-  macos-plugins:
-    name: macOS VST3 and AU
+  #-----------------------------------------------------------------------------
+  macos-universal:
+    name: macOS • VST3 + AU (universal)
     runs-on: macos-14
     steps:
       - name: Checkout MIRRORA
         uses: actions/checkout@v4
+
       - name: Checkout JUCE
         uses: actions/checkout@v4
         with:
           repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_TAG }}
           path: JUCE
+
       - name: Configure
-        run: cmake -S . -B build -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE" -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -S . -B build -G Xcode
+          -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE"
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
+
       - name: Build VST3 and AU
         run: cmake --build build --config Release --target MIRRORA_VST3 MIRRORA_AU --parallel
-      - name: Upload VST3 artifact
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3 dist/MIRRORA-macOS-VST3.zip
+          ditto -c -k --sequesterRsrc --keepParent build/MIRRORA_artefacts/Release/AU/MIRRORA.component dist/MIRRORA-macOS-AU.zip
+
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: MIRRORA-macOS-VST3
-          path: build/MIRRORA_artefacts/Release/VST3/MIRRORA.vst3
+          name: MIRRORA-macOS
+          path: dist/*.zip
           if-no-files-found: error
-      - name: Upload AU artifact
-        uses: actions/upload-artifact@v4
+
+  #-----------------------------------------------------------------------------
+  linux-compile-check:
+    name: Linux x64 • compile check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout MIRRORA
+        uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
         with:
-          name: MIRRORA-macOS-AU
-          path: build/MIRRORA_artefacts/Release/AU/MIRRORA.component
-          if-no-files-found: error
+          repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_TAG }}
+          path: JUCE
+
+      - name: Install JUCE dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libasound2-dev libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev \
+            libgl1-mesa-dev libcurl4-openssl-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE"
+
+      - name: Build
+        run: cmake --build build --target MIRRORA_VST3 --parallel
+
+  #-----------------------------------------------------------------------------
+  release:
+    name: Attach binaries to a release (tags only)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows-x64-vst3, macos-universal]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" dist/*.zip \
+            --repo "${{ github.repository }}" \
+            --title "MIRRORA ${{ github.ref_name }}" \
+            --notes "MIRRORA real-time reverse effect.
+
+          **Windows x64** — extract MIRRORA-Windows-x64-VST3.zip and copy MIRRORA.vst3 to C:\\Program Files\\Common Files\\VST3
+
+          **macOS** — VST3: copy MIRRORA.vst3 to /Library/Audio/Plug-Ins/VST3, AU: copy MIRRORA.component to /Library/Audio/Plug-Ins/Components (unsigned build: run +xattr -cr+ on the bundle after copying)"

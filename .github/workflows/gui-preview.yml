@@ -1,0 +1,135 @@
+name: GUI preview
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Source/**'
+      - 'tools/preview/**'
+      - 'tools/audiotest/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/gui-preview.yml'
+
+permissions:
+  contents: write
+
+env:
+  JUCE_TAG: 8.0.8
+
+jobs:
+  render:
+    name: Render the editor off-screen
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout MIRRORA
+        uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_TAG }}
+          path: JUCE
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config xvfb \
+            libasound2-dev libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev \
+            libgl1-mesa-dev libcurl4-openssl-dev fonts-dejavu-core
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_DIR="$GITHUB_WORKSPACE/JUCE"
+          -DMIRRORA_BUILD_PREVIEW=ON -DMIRRORA_BUILD_TESTS=ON
+
+      - name: Build renderer and self-test
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build --target MIRRORA_Preview MIRRORA_AudioTest --parallel 2>&1 | tee build.log
+
+      - name: Report build errors
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "error:|Error|undefined reference" build.log | head -n 40 | while IFS= read -r line; do
+            echo "::error title=preview build::$line"
+          done
+
+      - name: Run engine self-test
+        id: selftest
+        continue-on-error: true
+        shell: bash
+        run: |
+          TEST=$(find build -name "MIRRORA_AudioTest" -type f -perm -u+x | head -1)
+          echo "binary: $TEST"
+          if [ -z "$TEST" ]; then
+            echo "self-test binary not found" | tee test.log
+            exit 1
+          fi
+          xvfb-run -a "$TEST" 2>&1 | tee test.log
+
+      - name: Render
+        if: steps.selftest.outcome == 'success'
+        run: |
+          cd build
+          BIN=$(find . -name "MIRRORA_Preview" -type f -perm -u+x | head -1)
+          echo "binary: $BIN"
+          xvfb-run -a -s "-screen 0 1600x1200x24" "$BIN" mirrora-gui.png
+          ls -la mirrora-gui.png
+          python3 - <<'PY'
+          import base64, pathlib
+          data = base64.b64encode(pathlib.Path("mirrora-gui.png").read_bytes()).decode()
+          print("PNG start")
+          for i in range(0, len(data), 4000):
+              print("PNGCHUNK:" + data[i:i+4000], flush=True)
+          print("PNG end")
+          PY
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirrora-gui-preview
+          path: build/mirrora-gui.png
+          if-no-files-found: error
+
+      - name: Publish logs
+        if: always()
+        run: |
+          mkdir -p docs
+          cp test.log docs/selftest.log 2>/dev/null || echo "no test log" > docs/selftest.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f docs/selftest.log
+          if git diff --cached --quiet; then
+            echo "logs unchanged"
+          else
+            git commit -m "Update CI logs [skip ci]"
+            git push origin HEAD:refs/heads/${{ github.ref_name }} || true
+          fi
+
+      - name: Fail on self-test errors
+        if: steps.selftest.outcome == 'failure'
+        run: |
+          grep -E "FAIL|not found" docs/selftest.log | head -20 | while IFS= read -r line; do
+            echo "::error title=engine self-test::$line"
+          done
+          exit 1
+
+      - name: Commit preview image
+        if: github.event_name != 'pull_request' && ! startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p docs
+          cp build/mirrora-gui.png docs/gui-preview.png
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/gui-preview.png
+          if git diff --cached --quiet; then
+            echo "preview unchanged"
+            exit 0
+          fi
+          git commit -m "Update GUI preview [skip ci]"
+          git push origin HEAD:refs/heads/${{ github.ref_name }}
