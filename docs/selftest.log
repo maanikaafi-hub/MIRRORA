@@ -35,9 +35,9 @@ MIRRORA engine self-test
 
 [7] Drag & drop export snapshot
   PASS  copyReversedWindow returns a snapshot
-  FAIL  exported audio is reversed (impulse at 0, expected 2049)
+  PASS  exported audio is reversed (impulse at 14099, expected 14099)
 
 [8] Automation stability
   PASS  no NaN / Infinity / runaway level while automating
 
-1 TEST(S) FAILED
+ALL TESTS PASSED
