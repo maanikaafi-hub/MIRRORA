@@ -6,6 +6,7 @@ on:
     paths:
       - 'Source/**'
       - 'tools/preview/**'
+      - 'tools/audiotest/**'
       - 'CMakeLists.txt'
       - '.github/workflows/gui-preview.yml'
 
