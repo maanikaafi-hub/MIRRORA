@@ -274,8 +274,9 @@ int main()
     //--------------------------------------------------------------------------
     std::cout << "\n[7] Drag & drop export snapshot" << std::endl;
     {
+        // two 1/4 windows (22050 samples each); the impulse sits in the second one
         std::vector<float> input ((size_t) 44100, 0.0f);
-        input[(size_t) 20000] = 0.9f;
+        input[(size_t) 30000] = 0.9f;
 
         Harness harness (100.0f, 4, false);
         harness.run (input);
@@ -296,8 +297,9 @@ int main()
                 peak = i;
             }
 
-        check (ok && std::abs (peak - 2049) <= 1,
-               "exported audio is reversed (impulse at " + juce::String (peak) + ", expected 2049)");
+        // 30000 is 7950 samples into the second window => reversed index 22050-1-7950
+        check (ok && std::abs (peak - 14099) <= 1,
+               "exported audio is reversed (impulse at " + juce::String (peak) + ", expected 14099)");
     }
 
     //--------------------------------------------------------------------------
