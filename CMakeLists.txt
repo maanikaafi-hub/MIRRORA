@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(MIRRORA VERSION 1.0.0 LANGUAGES C CXX)
+project(MIRRORA VERSION 1.1.0 LANGUAGES C CXX)
 
 #===============================================================================
 # JUCE
@@ -117,8 +117,8 @@ if(MIRRORA_BUILD_PREVIEW)
 
     target_compile_definitions(MIRRORA_Preview PRIVATE
         JucePlugin_Name="MIRRORA"
-        JucePlugin_VersionString="1.0.0"
-        JucePlugin_VersionCode=0x10000
+        JucePlugin_VersionString="1.1.0"
+        JucePlugin_VersionCode=0x10100
         JucePlugin_Desc="Real-time reverse effect"
         JucePlugin_Manufacturer="Plugin Store"
         JucePlugin_ManufacturerCode=0x506c5374
@@ -170,8 +170,8 @@ if(MIRRORA_BUILD_TESTS)
 
     target_compile_definitions(MIRRORA_AudioTest PRIVATE
         JucePlugin_Name="MIRRORA"
-        JucePlugin_VersionString="1.0.0"
-        JucePlugin_VersionCode=0x10000
+        JucePlugin_VersionString="1.1.0"
+        JucePlugin_VersionCode=0x10100
         JucePlugin_Desc="Real-time reverse effect"
         JucePlugin_Manufacturer="Plugin Store"
         JucePlugin_ManufacturerCode=0x506c5374
