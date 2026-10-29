@@ -53,18 +53,20 @@ void Knob::paint (juce::Graphics& g)
 
 void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
 {
-    // Analog-style knob: tick scale, chrome bezel, fluted (knurled) body,
-    // domed cap and a bright pointer.
-    const float margin   = large ? 7.0f : 5.0f;      // space for the tick marks
-    const float diameter = juce::jmax (12.0f, juce::jmin (area.getWidth(), area.getHeight()) - margin * 2.0f);
-    const auto  centre   = area.getCentre();
+    // Reproduces the MIRRORA artwork: black bezel ring, glowing purple value arc,
+    // tick ring (small knobs), radially spun dark metal body and a short pointer.
+    const float margin = large ? 6.0f : 7.0f;
+    const float outR   = juce::jmin (area.getWidth(), area.getHeight()) * 0.5f - margin;
+    const auto  centre = area.getCentre();
 
-    const float tickRadius = diameter * 0.5f;
-    const float ringRadius = tickRadius - (large ? 5.5f : 4.5f);      // glowing value ring
-    const float bezelRadius = ringRadius - (large ? 4.5f : 3.5f);     // chrome bezel
-    const float bodyRadius  = bezelRadius - (large ? 6.5f : 5.0f);    // fluted body
+    if (outR < 6.0f)
+        return;
 
-    const float ringWidth = large ? 3.4f : 2.4f;
+    const float bodyR     = outR * (large ? 0.795f : 0.660f);
+    const float arcR      = outR * (large ? 0.900f : 0.805f);
+    const float tickInner = outR * (large ? 0.950f : 0.845f);
+    const float tickOuter = outR * (large ? 0.995f : 0.945f);
+    const float arcWidth  = large ? 4.2f : 2.2f;
 
     const auto rotary = getRotaryParameters();
     const float startAngle = rotary.startAngleRadians;
@@ -72,177 +74,166 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
     const float proportion = juce::jlimit (0.0f, 1.0f, (float) valueToProportionOfLength (getValue()));
     const float angle      = startAngle + proportion * (endAngle - startAngle);
 
-    //---- tick scale ---------------------------------------------------------
-    constexpr int numTicks = 11;
+    //---- outer bezel --------------------------------------------------------
+    juce::ColourGradient bezel (juce::Colour (0xff232228), centre.x, centre.y,
+                                juce::Colour (0xff050408), centre.x, centre.y - outR, true);
+    bezel.addColour (0.72, juce::Colour (0xff101016));
+    bezel.addColour (0.92, juce::Colour (0xff040406));
+    g.setGradientFill (bezel);
+    g.fillEllipse (centre.x - outR, centre.y - outR, outR * 2.0f, outR * 2.0f);
 
-    for (int i = 0; i < numTicks; ++i)
+    // faint purple haze around the whole dial
+    g.setColour (accent.withAlpha (hovering ? 0.10f : 0.055f));
+    g.drawEllipse (centre.x - outR + 1.5f, centre.y - outR + 1.5f,
+                   (outR - 1.5f) * 2.0f, (outR - 1.5f) * 2.0f, 3.0f);
+
+    //---- inactive arc track -------------------------------------------------
+    g.setColour (juce::Colour (0xff2c2937));
+    g.strokePath (makeArc (centre, arcR, startAngle, endAngle),
+                  juce::PathStrokeType (arcWidth, juce::PathStrokeType::curved,
+                                        juce::PathStrokeType::rounded));
+
+    //---- glowing value arc --------------------------------------------------
+    if (proportion > 0.001f)
     {
-        const float t = (float) i / (float) (numTicks - 1);
-        const float tickAngle = startAngle + t * (endAngle - startAngle);
-        const bool passed = t <= proportion + 1.0e-4f;
+        const auto valueArc = makeArc (centre, arcR, startAngle,
+                                       juce::jmax (startAngle + 0.015f, angle));
 
-        const float inner = tickRadius - (large ? 1.0f : 0.8f);
-        const float outer = tickRadius + (large ? 3.6f : 2.8f);
-
-        g.setColour (passed ? accent.withAlpha (0.95f) : juce::Colours::white.withAlpha (0.16f));
-        g.drawLine (juce::Line<float> (centre.getPointOnCircumference (inner, tickAngle),
-                                       centre.getPointOnCircumference (outer, tickAngle)),
-                    large ? 1.9f : 1.4f);
+        if (large)
+        {
+            drawGlowPath (g, valueArc, accent, arcWidth, arcWidth * 4.0f, 0.42f);
+        }
+        else
+        {
+            g.setColour (accent.withAlpha (0.55f));
+            g.strokePath (valueArc, juce::PathStrokeType (arcWidth, juce::PathStrokeType::curved,
+                                                          juce::PathStrokeType::rounded));
+        }
     }
 
-    //---- glowing value ring -------------------------------------------------
-    const auto trackArc = makeArc (centre, ringRadius, startAngle, endAngle);
-    g.setColour (juce::Colours::white.withAlpha (0.09f));
-    g.strokePath (trackArc, juce::PathStrokeType (ringWidth, juce::PathStrokeType::curved,
-                                                  juce::PathStrokeType::rounded));
-
-    if (proportion > 0.002f)
+    //---- tick ring (analog scale, small knobs) ------------------------------
+    if (! large)
     {
-        const auto valueArc = makeArc (centre, ringRadius, startAngle,
-                                       juce::jmax (startAngle + 0.02f, angle));
-        drawGlowPath (g, valueArc, accent, ringWidth, ringWidth * 4.5f, 0.30f);
+        constexpr int numTicks = 44;
+
+        for (int i = 0; i < numTicks; ++i)
+        {
+            const float t = (float) i / (float) (numTicks - 1);
+            const float tickAngle = startAngle + t * (endAngle - startAngle);
+            const bool passed = t <= proportion + 1.0e-4f;
+            const bool major = (i % 4) == 0;
+
+            const float inner = tickInner - (major ? 0.0f : 1.2f);
+            const float outer = tickOuter - (major ? 0.0f : 1.6f);
+
+            if (passed)
+            {
+                g.setColour (accent.withAlpha (0.85f));
+                g.drawLine (juce::Line<float> (centre.getPointOnCircumference (inner, tickAngle),
+                                               centre.getPointOnCircumference (outer, tickAngle)),
+                            major ? 1.7f : 1.1f);
+            }
+            else
+            {
+                g.setColour (juce::Colour (0xff443f56).withAlpha (major ? 0.85f : 0.55f));
+                g.drawLine (juce::Line<float> (centre.getPointOnCircumference (inner, tickAngle),
+                                               centre.getPointOnCircumference (outer, tickAngle)),
+                            major ? 1.5f : 1.0f);
+            }
+        }
     }
 
-    //---- chrome bezel -------------------------------------------------------
-    {
-        g.setColour (juce::Colours::black.withAlpha (0.60f));
-        g.fillEllipse (centre.x - bezelRadius - 1.5f, centre.y - bezelRadius - 0.5f,
-                       (bezelRadius + 1.5f) * 2.0f, (bezelRadius + 1.5f) * 2.0f);
+    //---- silver rim highlight on the top left of the arc --------------------
+    g.setColour (juce::Colours::white.withAlpha (large ? 0.55f : 0.30f));
+    g.strokePath (makeArc (centre, arcR - arcWidth * 0.15f,
+                           juce::MathConstants<float>::pi * 1.02f,
+                           juce::MathConstants<float>::pi * 1.30f),
+                  juce::PathStrokeType (large ? 1.5f : 1.1f, juce::PathStrokeType::curved,
+                                        juce::PathStrokeType::rounded));
 
-        juce::ColourGradient chrome (juce::Colour (0xff8f8e9a),
-                                     centre.x - bezelRadius * 0.5f, centre.y - bezelRadius * 0.7f,
-                                     juce::Colour (0xff191820),
-                                     centre.x + bezelRadius * 0.6f, centre.y + bezelRadius * 0.8f,
-                                     true);
-        chrome.addColour (0.45, juce::Colour (0xff45444e));
-        g.setGradientFill (chrome);
-        g.fillEllipse (centre.x - bezelRadius, centre.y - bezelRadius,
-                       bezelRadius * 2.0f, bezelRadius * 2.0f);
-
-        juce::Path bezelPath;
-        bezelPath.addEllipse (centre.x - bezelRadius, centre.y - bezelRadius,
-                              bezelRadius * 2.0f, bezelRadius * 2.0f);
-        g.setColour (juce::Colours::white.withAlpha (0.28f));
-        g.strokePath (bezelPath, juce::PathStrokeType (1.0f));
-        g.setColour (juce::Colours::black.withAlpha (0.65f));
-        g.drawEllipse (centre.x - bezelRadius + 1.0f, centre.y - bezelRadius + 1.0f,
-                       (bezelRadius - 1.0f) * 2.0f, (bezelRadius - 1.0f) * 2.0f, 1.2f);
-    }
-
-    //---- fluted body --------------------------------------------------------
+    //---- spun metal body ----------------------------------------------------
     juce::Path bodyPath;
-    bodyPath.addEllipse (centre.x - bodyRadius, centre.y - bodyRadius,
-                         bodyRadius * 2.0f, bodyRadius * 2.0f);
+    bodyPath.addEllipse (centre.x - bodyR, centre.y - bodyR, bodyR * 2.0f, bodyR * 2.0f);
 
     {
         juce::Graphics::ScopedSaveState clipScope (g);
         g.reduceClipRegion (bodyPath);
 
-        // base dome
-        juce::ColourGradient base (juce::Colour (0xff9a99a5),
-                                   centre.x - bodyRadius * 0.34f, centre.y - bodyRadius * 0.46f,
-                                   juce::Colour (0xff0b0a10),
-                                   centre.x + bodyRadius * 0.95f, centre.y + bodyRadius * 0.95f,
-                                   true);
-        base.addColour (0.18, juce::Colour (0xff77767f));
-        base.addColour (0.44, juce::Colour (0xff38373f));
-        base.addColour (0.72, juce::Colour (0xff1d1c23));
-        g.setGradientFill (base);
+        // light gathers towards the lower left, dark towards the top right
+        juce::ColourGradient metal (juce::Colour (0xffa9a8b4),
+                                    centre.x - bodyR * 0.42f, centre.y + bodyR * 0.55f,
+                                    juce::Colour (0xff0a090e),
+                                    centre.x + bodyR * 0.62f, centre.y - bodyR * 0.72f,
+                                    true);
+        metal.addColour (0.18, juce::Colour (0xff6d6c78));
+        metal.addColour (0.40, juce::Colour (0xff3a3943));
+        metal.addColour (0.62, juce::Colour (0xff24232b));
+        metal.addColour (0.84, juce::Colour (0xff141319));
+        g.setGradientFill (metal);
         g.fillRect (area);
 
-        // knurled flutes that rotate with the knob
-        const int numFlutes = large ? 44 : 32;
-        const float fluteStep = juce::MathConstants<float>::twoPi / (float) numFlutes;
-
+        // radial "spun metal" streaks that follow the knob
         juce::Graphics::ScopedSaveState rotateScope (g);
         g.addTransform (juce::AffineTransform::rotation (angle, centre.x, centre.y));
 
-        for (int i = 0; i < numFlutes; ++i)
+        const int numStreaks = large ? 360 : 220;
+
+        for (int i = 0; i < numStreaks; ++i)
         {
-            const float a0 = (float) i * fluteStep;
-            const float a1 = a0 + fluteStep * 0.5f;
+            const float a = (float) i * juce::MathConstants<float>::twoPi / (float) numStreaks;
+            const float shimmer = 0.35f + 0.65f * std::pow (0.5f + 0.5f * std::sin (a * 3.0f + 1.1f), 3.0f);
 
-            juce::Path ridge;
-            ridge.addPieSegment (centre.x - bodyRadius, centre.y - bodyRadius,
-                                 bodyRadius * 2.0f, bodyRadius * 2.0f,
-                                 a0 - juce::MathConstants<float>::halfPi,
-                                 a1 - juce::MathConstants<float>::halfPi,
-                                 0.42f);
-
-            g.setColour (juce::Colours::white.withAlpha (0.115f));
-            g.fillPath (ridge);
-
-            juce::Path groove;
-            groove.addPieSegment (centre.x - bodyRadius, centre.y - bodyRadius,
-                                  bodyRadius * 2.0f, bodyRadius * 2.0f,
-                                  a1 - juce::MathConstants<float>::halfPi,
-                                  (a1 + fluteStep * 0.5f) - juce::MathConstants<float>::halfPi,
-                                  0.42f);
-            g.setColour (juce::Colours::black.withAlpha (0.38f));
-            g.fillPath (groove);
+            g.setColour (juce::Colours::white.withAlpha (0.006f + 0.030f * shimmer));
+            g.drawLine (juce::Line<float> (centre.getPointOnCircumference (bodyR * 0.05f, a),
+                                           centre.getPointOnCircumference (bodyR * 0.99f, a)),
+                        0.7f);
         }
 
-        // specular bloom
-        juce::ColourGradient specular (juce::Colours::white.withAlpha (0.20f),
-                                       centre.x - bodyRadius * 0.36f, centre.y - bodyRadius * 0.44f,
+        // bright convergence point (slightly below left of the centre)
+        const juce::Point<float> focus (centre.x - bodyR * 0.06f, centre.y + bodyR * 0.10f);
+        juce::ColourGradient core (juce::Colours::white.withAlpha (0.20f), focus.x, focus.y,
+                                   juce::Colours::transparentWhite, focus.x, focus.y, true);
+        core.addColour (0.30, juce::Colours::white.withAlpha (0.05f));
+        g.setGradientFill (core);
+        g.fillEllipse (focus.x - bodyR * 0.55f, focus.y - bodyR * 0.55f,
+                       bodyR * 1.10f, bodyR * 1.10f);
+
+        // specular sheen sweeping the left shoulder
+        juce::ColourGradient shoulder (juce::Colours::white.withAlpha (large ? 0.13f : 0.09f),
+                                       centre.x - bodyR * 0.60f, centre.y + bodyR * 0.34f,
                                        juce::Colours::transparentWhite,
-                                       centre.x - bodyRadius * 0.36f, centre.y - bodyRadius * 0.44f,
-                                       true);
-        specular.addColour (0.40, juce::Colours::white.withAlpha (0.06f));
-        g.setGradientFill (specular);
+                                       centre.x - bodyR * 0.60f, centre.y + bodyR * 0.34f, true);
+        shoulder.addColour (0.55, juce::Colours::white.withAlpha (0.02f));
+        g.setGradientFill (shoulder);
         g.fillRect (area);
 
-        // edge shading so the cap looks domed
+        // edge falloff
         juce::ColourGradient vignette (juce::Colours::transparentBlack, centre.x, centre.y,
-                                       juce::Colours::black.withAlpha (0.60f),
-                                       centre.x, centre.y - bodyRadius, true);
-        vignette.addColour (0.62, juce::Colours::transparentBlack);
+                                       juce::Colours::black.withAlpha (0.72f),
+                                       centre.x, centre.y - bodyR, true);
+        vignette.addColour (0.66, juce::Colours::transparentBlack);
         g.setGradientFill (vignette);
         g.fillRect (area);
     }
 
-    g.setColour (juce::Colours::white.withAlpha (0.20f));
-    g.strokePath (bodyPath, juce::PathStrokeType (1.1f));
-
-    // glossy highlight on the top-left shoulder
-    g.setColour (juce::Colours::white.withAlpha (0.45f));
-    g.strokePath (makeArc (centre, bodyRadius * 0.80f,
-                           juce::MathConstants<float>::pi * 1.12f,
-                           juce::MathConstants<float>::pi * 1.40f),
-                  juce::PathStrokeType (large ? 2.6f : 1.9f,
-                                        juce::PathStrokeType::curved,
-                                        juce::PathStrokeType::rounded));
-
-    //---- centre cap ---------------------------------------------------------
-    const float capRadius = bodyRadius * 0.20f;
-
-    juce::ColourGradient cap (juce::Colour (0xff4a4954), centre.x - capRadius * 0.4f, centre.y - capRadius * 0.5f,
-                              juce::Colour (0xff121118), centre.x + capRadius * 0.7f, centre.y + capRadius * 0.7f,
-                              true);
-    g.setGradientFill (cap);
-    g.fillEllipse (centre.x - capRadius, centre.y - capRadius, capRadius * 2.0f, capRadius * 2.0f);
-    g.setColour (juce::Colours::black.withAlpha (0.7f));
-    g.drawEllipse (centre.x - capRadius, centre.y - capRadius, capRadius * 2.0f, capRadius * 2.0f, 1.2f);
-    g.setColour (juce::Colours::white.withAlpha (0.22f));
-    g.drawEllipse (centre.x - capRadius * 0.55f, centre.y - capRadius * 0.75f,
-                   capRadius * 0.9f, capRadius * 0.9f, 1.0f);
+    // crisp machined edge
+    g.setColour (juce::Colours::white.withAlpha (0.16f));
+    g.strokePath (bodyPath, juce::PathStrokeType (1.0f));
+    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.drawEllipse (centre.x - bodyR - 1.2f, centre.y - bodyR - 1.2f,
+                   (bodyR + 1.2f) * 2.0f, (bodyR + 1.2f) * 2.0f, 1.4f);
 
     //---- pointer ------------------------------------------------------------
-    const auto tip   = centre.getPointOnCircumference (bodyRadius * 0.92f, angle);
-    const auto inner = centre.getPointOnCircumference (bodyRadius * 0.34f, angle);
+    const auto tip   = centre.getPointOnCircumference (bodyR * 0.93f, angle);
+    const auto inner = centre.getPointOnCircumference (bodyR * 0.58f, angle);
+    const juce::Line<float> needle (inner, tip);
 
-    g.setColour (accent.withAlpha (0.35f));
-    g.drawLine (juce::Line<float> (inner, tip), large ? 7.5f : 6.0f);
-    g.setColour (colours::purpleSoft);
-    g.drawLine (juce::Line<float> (inner, tip), large ? 3.4f : 2.7f);
-    g.setColour (juce::Colours::white.withAlpha (0.9f));
-    g.drawLine (juce::Line<float> (inner, tip), 1.1f);
-
+    g.setColour (accent.withAlpha (0.30f));
+    g.drawLine (needle, large ? 8.0f : 6.0f);
     g.setColour (accent);
-    g.fillEllipse (tip.x - (large ? 3.0f : 2.3f), tip.y - (large ? 3.0f : 2.3f),
-                   large ? 6.0f : 4.6f, large ? 6.0f : 4.6f);
-    g.setColour (juce::Colours::white.withAlpha (0.75f));
-    g.fillEllipse (tip.x - 1.0f, tip.y - 1.0f, 2.0f, 2.0f);
+    g.drawLine (needle, large ? 3.6f : 2.6f);
+    g.setColour (juce::Colours::white.withAlpha (0.95f));
+    g.drawLine (needle, large ? 1.5f : 1.1f);
 }
 
 //==============================================================================
