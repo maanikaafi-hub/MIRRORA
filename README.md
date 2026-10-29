@@ -44,9 +44,10 @@ or `auval -a` once.
 
 | Control | What it does |
 |---|---|
-| **SIMPLE / RHYTHMIC** | Reverse mode. SIMPLE uses a fixed window with a soft de-click fade; RHYTHMIC snaps the window to the tempo and uses a tight fade so the reversed part punches on the grid. |
+| **SIMPLE / RHYTHMIC** | Reverse mode. SIMPLE uses a fixed window duration; RHYTHMIC locks every window to the host's musical grid (PPQ), so each reversed chunk starts exactly on the beat, follows tempo changes and re-locks after a loop/seek. |
 | **MIX** | Dry/wet balance (0–100 %). |
-| **LENGTH** (knob + bottom stepper) | Window size: `1/4`, `1/2`, `1 Bar`, `2 Bars` in RHYTHMIC mode, `0.25 s` … `2 s` in SIMPLE mode. |
+| **LENGTH** (knob + bottom stepper) | Note value of the reversed window: **1/16, 1/8T, 1/8, 1/4T, 1/4, 1/2T, 1/2, 1 Bar, 2 Bars** (triplets included). In SIMPLE mode the same steps are used as fixed durations (0.125 s … 4 s). |
+| **Waveform drag & drop** | Drag the waveform panel out of the plug-in to export the current reversed window as a **24-bit WAV** — drop it on the DAW, a sampler, the desktop, or a chat window. |
 | **BPM SYNC** | Follow the host tempo when the host reports it. |
 | **OUTPUT** (knob + bottom stepper) | Output level, −24 … +12 dB. |
 | **Waveform** | Live scope of the audio that is being captured for reversal. |
@@ -99,6 +100,13 @@ The previous prototype did not work as a reverse effect. This version:
   and every control is a proper automatable parameter with host gestures.
 * **Length change is glitch-free** and the buffers are allocated for the worst
   case (8 s window) in `prepareToPlay`, never in `processBlock`.
+* **RHYTHMIC mode re-locked to the grid.** 1.1.0 computes the next note-value
+  boundary from the host PPQ position and flips the window on that exact sample
+  (no drift), instead of just using `60/bpm`.
+* **Triplets and 1/8 / 1/16 values** added to LENGTH (1/16 … 2 Bars, incl. 1/8T,
+  1/4T, 1/2T) in both modes.
+* **Drag & drop export** of the reversed audio as a 24-bit WAV file.
+* **Analog knobs**: tick scale, chrome bezel, knurled (fluted) body and pointer.
 * **GUI rebuilt** as resolution-independent vector graphics that match the
   artwork exactly (metal knobs, purple value arcs, mode buttons, BPM SYNC pill,
   animated waveform, bottom steppers, header zoom) and scale crisply from 70 %

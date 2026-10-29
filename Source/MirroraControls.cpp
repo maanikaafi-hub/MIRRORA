@@ -144,9 +144,9 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
                                    juce::Colour (0xff0b0a10),
                                    centre.x + bodyRadius * 0.95f, centre.y + bodyRadius * 0.95f,
                                    true);
-        base.addColour (0.22, juce::Colour (0xff5d5c68));
-        base.addColour (0.48, juce::Colour (0xff2b2a33));
-        base.addColour (0.74, juce::Colour (0xff1a1920));
+        base.addColour (0.18, juce::Colour (0xff77767f));
+        base.addColour (0.44, juce::Colour (0xff38373f));
+        base.addColour (0.72, juce::Colour (0xff1d1c23));
         g.setGradientFill (base);
         g.fillRect (area);
 
@@ -169,7 +169,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
                                  a1 - juce::MathConstants<float>::halfPi,
                                  0.42f);
 
-            g.setColour (juce::Colours::white.withAlpha (0.085f));
+            g.setColour (juce::Colours::white.withAlpha (0.115f));
             g.fillPath (ridge);
 
             juce::Path groove;
@@ -178,7 +178,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
                                   a1 - juce::MathConstants<float>::halfPi,
                                   (a1 + fluteStep * 0.5f) - juce::MathConstants<float>::halfPi,
                                   0.42f);
-            g.setColour (juce::Colours::black.withAlpha (0.30f));
+            g.setColour (juce::Colours::black.withAlpha (0.38f));
             g.fillPath (groove);
         }
 
