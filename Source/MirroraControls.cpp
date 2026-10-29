@@ -66,7 +66,7 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
     const float arcR      = outR * (large ? 0.900f : 0.805f);
     const float tickInner = outR * (large ? 0.950f : 0.845f);
     const float tickOuter = outR * (large ? 0.995f : 0.945f);
-    const float arcWidth  = large ? 4.2f : 2.2f;
+    const float arcWidth  = large ? 4.2f : 3.0f;
 
     const auto rotary = getRotaryParameters();
     const float startAngle = rotary.startAngleRadians;
@@ -159,59 +159,91 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
         juce::Graphics::ScopedSaveState clipScope (g);
         g.reduceClipRegion (bodyPath);
 
-        // light gathers towards the lower left, dark towards the top right
-        juce::ColourGradient metal (juce::Colour (0xffa9a8b4),
-                                    centre.x - bodyR * 0.42f, centre.y + bodyR * 0.55f,
-                                    juce::Colour (0xff0a090e),
-                                    centre.x + bodyR * 0.62f, centre.y - bodyR * 0.72f,
+        // base shading: brighter towards the lower left, deep black to the top right
+        juce::ColourGradient metal (juce::Colour (0xffb4b3c0),
+                                    centre.x - bodyR * 0.46f, centre.y + bodyR * 0.58f,
+                                    juce::Colour (0xff08070b),
+                                    centre.x + bodyR * 0.66f, centre.y - bodyR * 0.78f,
                                     true);
-        metal.addColour (0.18, juce::Colour (0xff6d6c78));
-        metal.addColour (0.40, juce::Colour (0xff3a3943));
-        metal.addColour (0.62, juce::Colour (0xff24232b));
+        metal.addColour (0.16, juce::Colour (0xff84838f));
+        metal.addColour (0.38, juce::Colour (0xff4c4b56));
+        metal.addColour (0.62, juce::Colour (0xff2a2932));
         metal.addColour (0.84, juce::Colour (0xff141319));
         g.setGradientFill (metal);
         g.fillRect (area);
 
-        // radial "spun metal" streaks that follow the knob
         juce::Graphics::ScopedSaveState rotateScope (g);
         g.addTransform (juce::AffineTransform::rotation (angle, centre.x, centre.y));
 
-        const int numStreaks = large ? 360 : 220;
+        // broad spun sectors (soft, wide bands of light and shadow)
+        const int numSectors = large ? 72 : 48;
+        const float sectorStep = juce::MathConstants<float>::twoPi / (float) numSectors;
 
-        for (int i = 0; i < numStreaks; ++i)
+        for (int i = 0; i < numSectors; ++i)
         {
-            const float a = (float) i * juce::MathConstants<float>::twoPi / (float) numStreaks;
-            const float shimmer = 0.35f + 0.65f * std::pow (0.5f + 0.5f * std::sin (a * 3.0f + 1.1f), 3.0f);
+            const float a0 = (float) i * sectorStep;
+            const float phase = 0.5f + 0.5f * std::sin (a0 * 2.0f + 0.9f);
+            const float brightness = std::pow (phase, 2.2f);
 
-            g.setColour (juce::Colours::white.withAlpha (0.006f + 0.030f * shimmer));
-            g.drawLine (juce::Line<float> (centre.getPointOnCircumference (bodyR * 0.05f, a),
-                                           centre.getPointOnCircumference (bodyR * 0.99f, a)),
-                        0.7f);
+            juce::Path band;
+            band.addPieSegment (centre.x - bodyR, centre.y - bodyR, bodyR * 2.0f, bodyR * 2.0f,
+                                a0 - juce::MathConstants<float>::halfPi,
+                                a0 + sectorStep - juce::MathConstants<float>::halfPi, 0.0f);
+
+            g.setColour (juce::Colours::white.withAlpha (0.02f + 0.075f * brightness));
+            g.fillPath (band);
+
+            if (brightness < 0.35f)
+            {
+                g.setColour (juce::Colours::black.withAlpha (0.10f * (1.0f - brightness)));
+                g.fillPath (band);
+            }
         }
 
-        // bright convergence point (slightly below left of the centre)
-        const juce::Point<float> focus (centre.x - bodyR * 0.06f, centre.y + bodyR * 0.10f);
-        juce::ColourGradient core (juce::Colours::white.withAlpha (0.20f), focus.x, focus.y,
-                                   juce::Colours::transparentWhite, focus.x, focus.y, true);
-        core.addColour (0.30, juce::Colours::white.withAlpha (0.05f));
-        g.setGradientFill (core);
-        g.fillEllipse (focus.x - bodyR * 0.55f, focus.y - bodyR * 0.55f,
-                       bodyR * 1.10f, bodyR * 1.10f);
+        // fine radial grain
+        const int numGrain = large ? 720 : 360;
 
-        // specular sheen sweeping the left shoulder
-        juce::ColourGradient shoulder (juce::Colours::white.withAlpha (large ? 0.13f : 0.09f),
-                                       centre.x - bodyR * 0.60f, centre.y + bodyR * 0.34f,
+        for (int i = 0; i < numGrain; ++i)
+        {
+            const float a = (float) i * juce::MathConstants<float>::twoPi / (float) numGrain;
+            const bool bright = std::sin (a * 9.0f + 0.4f) > 0.0f;
+
+            g.setColour (bright ? juce::Colours::white.withAlpha (0.028f)
+                                : juce::Colours::black.withAlpha (0.035f));
+            g.drawLine (juce::Line<float> (centre.getPointOnCircumference (bodyR * 0.03f, a),
+                                           centre.getPointOnCircumference (bodyR * 0.99f, a)),
+                        0.8f);
+        }
+
+        // convergence glow in the middle
+        const juce::Point<float> focus (centre.x - bodyR * 0.05f, centre.y + bodyR * 0.08f);
+        juce::ColourGradient core (juce::Colours::white.withAlpha (0.16f), focus.x, focus.y,
+                                   juce::Colours::transparentWhite, focus.x, focus.y, true);
+        core.addColour (0.22, juce::Colours::white.withAlpha (0.05f));
+        g.setGradientFill (core);
+        g.fillEllipse (focus.x - bodyR * 0.5f, focus.y - bodyR * 0.5f, bodyR, bodyR);
+
+        // dark smudge around the convergence, as in the artwork
+        juce::ColourGradient smudge (juce::Colours::transparentBlack, focus.x, focus.y,
+                                     juce::Colours::black.withAlpha (0.35f), focus.x, focus.y, true);
+        smudge.addColour (0.10, juce::Colours::transparentBlack);
+        g.setGradientFill (smudge);
+        g.fillEllipse (focus.x - bodyR * 0.42f, focus.y - bodyR * 0.42f, bodyR * 0.84f, bodyR * 0.84f);
+
+        // specular sheen across the lower-left shoulder
+        juce::ColourGradient shoulder (juce::Colours::white.withAlpha (large ? 0.16f : 0.11f),
+                                       centre.x - bodyR * 0.56f, centre.y + bodyR * 0.40f,
                                        juce::Colours::transparentWhite,
-                                       centre.x - bodyR * 0.60f, centre.y + bodyR * 0.34f, true);
-        shoulder.addColour (0.55, juce::Colours::white.withAlpha (0.02f));
+                                       centre.x - bodyR * 0.56f, centre.y + bodyR * 0.40f, true);
+        shoulder.addColour (0.60, juce::Colours::white.withAlpha (0.015f));
         g.setGradientFill (shoulder);
         g.fillRect (area);
 
         // edge falloff
         juce::ColourGradient vignette (juce::Colours::transparentBlack, centre.x, centre.y,
-                                       juce::Colours::black.withAlpha (0.72f),
+                                       juce::Colours::black.withAlpha (0.80f),
                                        centre.x, centre.y - bodyR, true);
-        vignette.addColour (0.66, juce::Colours::transparentBlack);
+        vignette.addColour (0.70, juce::Colours::transparentBlack);
         g.setGradientFill (vignette);
         g.fillRect (area);
     }
@@ -228,12 +260,12 @@ void Knob::paintDial (juce::Graphics& g, juce::Rectangle<float> area)
     const auto inner = centre.getPointOnCircumference (bodyR * 0.58f, angle);
     const juce::Line<float> needle (inner, tip);
 
-    g.setColour (accent.withAlpha (0.30f));
-    g.drawLine (needle, large ? 8.0f : 6.0f);
+    g.setColour (accent.withAlpha (0.22f));
+    g.drawLine ({ inner, tip }, large ? 7.0f : 5.0f);
     g.setColour (accent);
-    g.drawLine (needle, large ? 3.6f : 2.6f);
-    g.setColour (juce::Colours::white.withAlpha (0.95f));
-    g.drawLine (needle, large ? 1.5f : 1.1f);
+    g.drawLine (needle, large ? 3.0f : 2.2f);
+    g.setColour (juce::Colours::white.withAlpha (0.92f));
+    g.drawLine (needle, large ? 1.2f : 0.9f);
 }
 
 //==============================================================================
